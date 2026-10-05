@@ -1,133 +1,295 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
+from datetime import datetime
 
-from database import get_connection
-
-
+# ---------------------------------------------------------
+# PAGE CONFIGURATION
+# ---------------------------------------------------------
 st.set_page_config(
-    page_title="Admin Dashboard",
-    page_icon="📊",
+    page_title="Admin Dashboard - Food Donation System",
+    page_icon="🍱",
     layout="wide"
 )
 
+# ---------------------------------------------------------
+# TITLE
+# ---------------------------------------------------------
+st.title("🍱 Food Waste Reduction & Donation System")
+st.subheader("👨‍💼 Admin Dashboard")
 
-if "logged_in" not in st.session_state:
+st.markdown("---")
 
-    st.warning("Please login first.")
+# ---------------------------------------------------------
+# SAMPLE DATA
+# ---------------------------------------------------------
+# You can replace this with your database data later.
 
-    st.stop()
+donations = [
+    {
+        "Donation ID": 1,
+        "Donor": "Rahul",
+        "Food": "Rice and Curry",
+        "Quantity": 20,
+        "Location": "Hyderabad",
+        "Status": "Collected",
+        "Date": "2026-10-01"
+    },
+    {
+        "Donation ID": 2,
+        "Donor": "Priya",
+        "Food": "Vegetable Biryani",
+        "Quantity": 15,
+        "Location": "Warangal",
+        "Status": "Pending",
+        "Date": "2026-10-02"
+    },
+    {
+        "Donation ID": 3,
+        "Donor": "Anil",
+        "Food": "Chapati and Dal",
+        "Quantity": 25,
+        "Location": "Karimnagar",
+        "Status": "Delivered",
+        "Date": "2026-10-03"
+    },
+    {
+        "Donation ID": 4,
+        "Donor": "Sneha",
+        "Food": "Fruits",
+        "Quantity": 10,
+        "Location": "Hyderabad",
+        "Status": "Collected",
+        "Date": "2026-10-04"
+    }
+]
 
+donation_df = pd.DataFrame(donations)
 
-if st.session_state.get("role") != "admin":
+# ---------------------------------------------------------
+# SIDEBAR
+# ---------------------------------------------------------
+st.sidebar.title("🔐 Admin Menu")
 
-    st.error(
-        "Only administrators can access this page."
+menu = st.sidebar.radio(
+    "Select Option",
+    [
+        "Dashboard",
+        "All Donations",
+        "Pending Donations",
+        "Collected Donations",
+        "Delivered Donations"
+    ]
+)
+
+# ---------------------------------------------------------
+# DASHBOARD
+# ---------------------------------------------------------
+if menu == "Dashboard":
+
+    st.header("📊 Dashboard Overview")
+
+    total_donations = len(donation_df)
+
+    total_food = donation_df["Quantity"].sum()
+
+    pending_food = donation_df[
+        donation_df["Status"] == "Pending"
+    ]["Quantity"].sum()
+
+    collected_food = donation_df[
+        donation_df["Status"] == "Collected"
+    ]["Quantity"].sum()
+
+    delivered_food = donation_df[
+        donation_df["Status"] == "Delivered"
+    ]["Quantity"].sum()
+
+    # -----------------------------------------------------
+    # METRICS
+    # -----------------------------------------------------
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric(
+            "🍱 Total Donations",
+            total_donations
+        )
+
+    with col2:
+        st.metric(
+            "🥗 Total Food",
+            f"{total_food} kg"
+        )
+
+    with col3:
+        st.metric(
+            "⏳ Pending Food",
+            f"{pending_food} kg"
+        )
+
+    with col4:
+        st.metric(
+            "🚚 Collected Food",
+            f"{collected_food} kg"
+        )
+
+    st.markdown("---")
+
+    # -----------------------------------------------------
+    # ADDITIONAL STATISTICS
+    # -----------------------------------------------------
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.info(
+            f"📦 **Total Donations:** {total_donations}"
+        )
+
+    with col2:
+        st.success(
+            f"🚚 **Collected Food:** {collected_food} kg"
+        )
+
+    with col3:
+        st.success(
+            f"🏠 **Delivered Food:** {delivered_food} kg"
+        )
+
+    st.markdown("---")
+
+    # -----------------------------------------------------
+    # DONATION STATUS CHART
+    # -----------------------------------------------------
+
+    st.subheader("📈 Donation Status")
+
+    status_count = donation_df["Status"].value_counts()
+
+    st.bar_chart(status_count)
+
+    st.markdown("---")
+
+    # -----------------------------------------------------
+    # RECENT DONATIONS
+    # -----------------------------------------------------
+
+    st.subheader("🕒 Recent Donations")
+
+    st.dataframe(
+        donation_df.tail(5),
+        use_container_width=True,
+        hide_index=True
     )
 
-    st.stop()
 
+# ---------------------------------------------------------
+# ALL DONATIONS
+# ---------------------------------------------------------
+elif menu == "All Donations":
 
-st.title("📊 Admin Dashboard")
+    st.header("🍱 All Food Donations")
 
+    st.dataframe(
+        donation_df,
+        use_container_width=True,
+        hide_index=True
+    )
 
-connection = get_connection()
+    st.write(
+        f"**Total Donations:** {len(donation_df)}"
+    )
 
-
-# Total users
-total_users = connection.execute("""
-    SELECT COUNT(*) AS count
-    FROM users
-""").fetchone()["count"]
-
-
-# Total donations
-total_donations = connection.execute("""
-    SELECT COUNT(*) AS count
-    FROM donations
-""").fetchone()["count"]
-
-
-# Total food
-total_food = connection.execute("""
-    SELECT COALESCE(SUM(quantity), 0) AS total
-    FROM donations
-""").fetchone()["total"]
-
-
-# Total requests
-total_requests = connection.execute("""
-    SELECT COUNT(*) AS count
-    FROM requests
-""").fetchone()["count"]
-
-
-connection.close()
-
-
-# Statistics
-
-col1, col2, col3, col4 = st.columns(4)
-
-
-with col1:
-
-    st.metric(
-        "👥 Users",
-        total_users
+    st.write(
+        f"**Total Food Quantity:** {donation_df['Quantity'].sum()} kg"
     )
 
 
-with col2:
+# ---------------------------------------------------------
+# PENDING DONATIONS
+# ---------------------------------------------------------
+elif menu == "Pending Donations":
 
-    st.metric(
-        "🍱 Donations",
-        total_donations
-    )
+    st.header("⏳ Pending Donations")
 
+    pending_df = donation_df[
+        donation_df["Status"] == "Pending"
+    ]
 
-with col3:
+    if pending_df.empty:
+        st.success("No pending donations 🎉")
+    else:
+        st.dataframe(
+            pending_df,
+            use_container_width=True,
+            hide_index=True
+        )
 
-    st.metric(
-        "🥘 Food Rescued",
-        total_food
-    )
-
-
-with col4:
-
-    st.metric(
-        "🤝 Requests",
-        total_requests
-    )
-
-
-st.divider()
+        st.warning(
+            f"Pending Food: {pending_df['Quantity'].sum()} kg"
+        )
 
 
-# Donation status chart
+# ---------------------------------------------------------
+# COLLECTED DONATIONS
+# ---------------------------------------------------------
+elif menu == "Collected Donations":
 
-connection = get_connection()
+    st.header("🚚 Collected Donations")
 
-data = pd.read_sql_query("""
-    SELECT status, COUNT(*) AS count
-    FROM donations
-    GROUP BY status
-""", connection)
+    collected_df = donation_df[
+        donation_df["Status"] == "Collected"
+    ]
 
-connection.close()
+    if collected_df.empty:
+        st.info("No collected donations available.")
+    else:
+        st.dataframe(
+            collected_df,
+            use_container_width=True,
+            hide_index=True
+        )
+
+        collected_food = collected_df["Quantity"].sum()
+
+        st.success(
+            f"Total Collected Food: {collected_food} kg"
+        )
 
 
-if not data.empty:
+# ---------------------------------------------------------
+# DELIVERED DONATIONS
+# ---------------------------------------------------------
+elif menu == "Delivered Donations":
 
-    fig = px.pie(
-        data,
-        names="status",
-        values="count",
-        title="Donation Status"
-    )
+    st.header("🏠 Delivered Donations")
 
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
+    delivered_df = donation_df[
+        donation_df["Status"] == "Delivered"
+    ]
+
+    if delivered_df.empty:
+        st.info("No delivered donations available.")
+    else:
+        st.dataframe(
+            delivered_df,
+            use_container_width=True,
+            hide_index=True
+        )
+
+        delivered_food = delivered_df["Quantity"].sum()
+
+        st.success(
+            f"Total Delivered Food: {delivered_food} kg"
+        )
+
+
+# ---------------------------------------------------------
+# FOOTER
+# ---------------------------------------------------------
+st.markdown("---")
+
+st.caption(
+    "Food Waste Reduction & Donation System | Admin Panel"
+)
